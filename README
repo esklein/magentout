@@ -1,0 +1,13 @@
+This application is a bridge between Magento & Checkout POS. Currently it's to enable real-time 
+inventory syncing from Checkout POS to Magento. This application uses the magja library which is a java/magento
+API bridge.
+
+The way it works is that using PostgreSQL notifications the Java Application (checkout-listener) sits and waits
+for product change notifications. When a notification is heard, the listener will InventoryAdapter will fire and
+run through it's process to see which items have changed & sync with Magento API.
+
+This application is in alpha state.
+
+TODO 
+Extend Magento API to allow linking of configurable & simple products
+Extent Magento API to allow the setting of product attributes
