@@ -35,22 +35,26 @@ import com.woe.sql.ConnectionManager;
  * develop a Magento Model. Finally, this model will be sent to Magento API.
  * 
  * @author esklein
- *
+ * 
  */
 public class InventoryAdapter {
 
     private Connection conn;
     private ProductRemoteService productService;
     private CategoryRemoteService categoryService;
-    
+    private List<Object> configurableProductsAdded;
+
     /**
      * 
      */
     public InventoryAdapter() {
 	try {
 	    conn = ConnectionManager.getConnection();
-	    productService = new RemoteServiceFactory().getProductRemoteService();
-	    categoryService = new RemoteServiceFactory().getCategoryRemoteService();
+	    productService = new RemoteServiceFactory()
+		    .getProductRemoteService();
+	    categoryService = new RemoteServiceFactory()
+		    .getCategoryRemoteService();
+	    configurableProductsAdded = new ArrayList<Object>();
 	} catch (Exception e) {
 	    e.printStackTrace();
 	}
@@ -103,9 +107,8 @@ public class InventoryAdapter {
 		    if (parentId > 0) {
 			verifyConfigurableProduct(parentId);
 		    }
-		    productService.save(
-			    getProductModel(productId,
-				    InventoryConstants.NEW_ACTION));
+		    productService.save(getProductModel(productId,
+			    InventoryConstants.NEW_ACTION));
 		} catch (ServiceException e) {
 		    e.printStackTrace();
 		    countProductsAdded--;
@@ -147,9 +150,8 @@ public class InventoryAdapter {
 		System.out.println("--- UPDATING PRODUCT ON WEBSITE: "
 			+ rs.getString("sortkey_string1"));
 		try {
-		    productService.save(
-			    getProductModel(productId,
-				    InventoryConstants.UPDATE_ACTION));
+		    productService.save(getProductModel(productId,
+			    InventoryConstants.UPDATE_ACTION));
 		} catch (ServiceException e) {
 		    e.printStackTrace();
 		    countProductsUpdated--;
@@ -391,9 +393,9 @@ public class InventoryAdapter {
 			     * it to list + product
 			     */
 			    Category category = new Category();
-			    category = categoryService.getByIdWithParent(
-					    Integer.parseInt(tagsArray[i]
-						    .trim()));
+			    category = categoryService
+				    .getByIdWithParent(Integer
+					    .parseInt(tagsArray[i].trim()));
 			    categoriesList.add(category);
 
 			    while (category.getParent() != null) {
@@ -405,9 +407,11 @@ public class InventoryAdapter {
 				 */
 				int categoryId = category.getParent().getId();
 				if (categoryId != InventoryConstants.DEFAULT_CATEGORY) {
-				    category = categoryService.getByIdWithParent(categoryId);
+				    category = categoryService
+					    .getByIdWithParent(categoryId);
 				} else {
-				    category = categoryService.getDefaultParent();
+				    category = categoryService
+					    .getDefaultParent();
 				}
 				categoriesList.add(category);
 			    }
@@ -446,18 +450,24 @@ public class InventoryAdapter {
 	    ResultSet rs = p.executeQuery();
 
 	    while (rs.next()) {
-
-		parentProduct = productService.getBySku(rs.getString("value"));
+		try {
+		    String sku = rs.getString("value");
+		    parentProduct = productService.getBySku(sku);
+		} catch (ServiceException e) {
+		    e.printStackTrace();
+		}
 	    }
 
 	    if (parentProduct != null
 		    && parentProduct.getType() != ProductTypeEnum.CONFIGURABLE
-			    .getProductType()) {
-		System.out.println("Product is being set to Configurable");
+			    .getProductType()
+		    && !configurableProductsAdded.contains(parentProduct
+			    .getSku())) {
+		System.out
+			.println("^^^ PRODUCT IS A PARENT - SETTING TO CONFIGURABLE");
 
-		// Use SQL to connect to magentoDB and change product to
-		// Configurable
-
+		productService.setProductTypeConfigurable(parentProduct);
+		configurableProductsAdded.add(parentProduct.getSku());
 	    }
 
 	} catch (ServiceException e) {
