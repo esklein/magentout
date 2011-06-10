@@ -14,12 +14,16 @@ CREATE OR REPLACE FUNCTION inventory_change() RETURNS trigger AS $inventory_chan
             --Check if inventory quantity changed
         	ELSIF (OLD.sortkey_number3 != NEW.sortkey_number3) THEN
             	NOTIFY productUpdatedQuantity;
-            	NEW.sync_status := 'OUT_OF_SYNC_UPDATE';            
+            	IF (OLD.sync_status != 'OUT_OF_SYNC_INSERT') THEN
+            		NEW.sync_status := 'OUT_OF_SYNC_UPDATE';          
+            	END IF;
             	
             --Check if inventory price changed
         	ELSIF (OLD.sortkey_number1 != NEW.sortkey_number1) THEN
             	NOTIFY productUpdatedPrice;
-            	NEW.sync_status := 'OUT_OF_SYNC_UPDATE';
+            	IF (OLD.sync_status != 'OUT_OF_SYNC_INSERT') THEN
+            		NEW.sync_status := 'OUT_OF_SYNC_UPDATE';          
+            	END IF;
             END IF;
             RETURN NEW;
             

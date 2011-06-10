@@ -7,25 +7,25 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import sun.print.resources.serviceui;
 
 import com.google.code.magja.model.category.Category;
 import com.google.code.magja.model.media.Media;
 import com.google.code.magja.model.product.Product;
+import com.google.code.magja.model.product.ProductAttribute;
 import com.google.code.magja.model.product.ProductMedia;
 import com.google.code.magja.model.product.ProductTypeEnum;
+import com.google.code.magja.model.product.ProductVisibilityEnum;
 import com.google.code.magja.service.RemoteServiceFactory;
 import com.google.code.magja.service.ServiceException;
 import com.google.code.magja.service.category.CategoryRemoteService;
+import com.google.code.magja.service.product.ProductAttributeRemoteService;
+import com.google.code.magja.service.product.ProductLinkRemoteService;
 import com.google.code.magja.service.product.ProductRemoteService;
 import com.woe.sql.ConnectionManager;
 
@@ -42,26 +42,33 @@ public class InventoryAdapter {
     private Connection conn;
     private ProductRemoteService productService;
     private CategoryRemoteService categoryService;
+    private ProductAttributeRemoteService attributeService;
+    private ProductLinkRemoteService productLinkService;
     private List<Object> configurableProductsAdded;
 
     /**
-     * 
+     * Everything starts here.
      */
     public InventoryAdapter() {
 	try {
 	    conn = ConnectionManager.getConnection();
 	    productService = new RemoteServiceFactory()
 		    .getProductRemoteService();
+	    productLinkService = new RemoteServiceFactory()
+		    .getProductLinkRemoteService();
 	    categoryService = new RemoteServiceFactory()
 		    .getCategoryRemoteService();
+	    attributeService = new RemoteServiceFactory()
+		    .getProductAttributeRemoteService();
 	    configurableProductsAdded = new ArrayList<Object>();
+
 	} catch (Exception e) {
 	    e.printStackTrace();
 	}
     }
 
     /**
-     * 
+     * And here..
      */
     @SuppressWarnings("deprecation")
     public void start() {
@@ -70,6 +77,8 @@ public class InventoryAdapter {
 	final long startTime = System.currentTimeMillis();
 	final long endTime;
 	try {
+	    // A notification has hit, call these three methods to sync with
+	    // Magento.
 	    commitNewProducts();
 	    commitUpdatedProducts();
 	    commitDeletedProducts();
@@ -81,7 +90,6 @@ public class InventoryAdapter {
 		+ duration + " SECONDS");
 	System.out
 		.println("---------------------------------------------------------------------");
-
     }
 
     /**
@@ -98,26 +106,50 @@ public class InventoryAdapter {
 	    ResultSet rs = p.executeQuery();
 
 	    while (rs.next()) {
-		int productId = rs.getInt("id");
-		int parentId = rs.getInt("id_parent");
+		int posProductId = rs.getInt("id");
+		int posParentId = rs.getInt("id_parent");
 
 		System.out.println("--- ADDING NEW PRODUCT TO WEBSITE: "
-			+ productId);
+			+ posProductId);
 		try {
-		    if (parentId > 0) {
-			verifyConfigurableProduct(parentId);
+		    /* Create the product model from checkout POS */
+		    Product product = getProductModel(posProductId,
+			    InventoryConstants.NEW_ACTION);
+
+		    /*
+		     * If this is a child product we don't need it to be visible
+		     * in the shopping cart
+		     */
+		    if (posParentId > 0) {
+			product
+				.setVisibility(ProductVisibilityEnum.VISIBILITY_NOT_VISIBLE);
 		    }
-		    productService.save(getProductModel(productId,
-			    InventoryConstants.NEW_ACTION));
+		    productService.save(product);
+
+		    /*
+		     * If this is a parent product see if it needs to be set as
+		     * a configurable product withing magento.
+		     * 
+		     * verifyConfigurableProduct() should determine if it needes
+		     * to be set as a Configurable product After that we should
+		     * assign a simple product to a configurable product, if
+		     * need be.
+		     */
+		    if (posParentId > 0) {
+			verifyConfigurableProduct(posParentId);
+			setParentLink(product, posParentId);
+			setProductAttribute(posProductId, product);
+		    }
+
 		} catch (ServiceException e) {
 		    e.printStackTrace();
 		    countProductsAdded--;
 		} catch (NullPointerException e) {
 		    /* This product is malformed in Checkout. */
 		    System.out.println("--- UNABLE TO UPLOAD PRODUCT: "
-			    + productId);
+			    + posProductId);
 		    countProductsAdded--;
-		    // e.printStackTrace();
+		    e.printStackTrace();
 		}
 		countProductsAdded++;
 		this.updateSyncStatus(rs.getInt("id"));
@@ -438,20 +470,28 @@ public class InventoryAdapter {
 
     }
 
-    private void verifyConfigurableProduct(int productId) {
+    private void verifyConfigurableProduct(int posProductId) {
 	try {
 
+	    /* Pull sku from product so we know what we're dealing with */
 	    Product parentProduct = null;
 	    String stmt = "SELECT value FROM metavalue WHERE id_item = ? AND ID_METATYPE = ?";
 	    PreparedStatement p = conn.prepareStatement(stmt);
-	    p.setInt(1, productId);
+	    p.setInt(1, posProductId);
 	    p.setInt(2, InventoryConstants.PROPERTY_CODE);
 
 	    ResultSet rs = p.executeQuery();
 
 	    while (rs.next()) {
 		try {
+		    /*
+		     * Check configurable product SKU ID - see if we can find it
+		     * within Magento
+		     */
 		    String sku = rs.getString("value");
+		    if (configurableProductsAdded.contains(sku))
+			return;
+		    // System.out.println("TRYING TO GET: " + sku);
 		    parentProduct = productService.getBySku(sku);
 		} catch (ServiceException e) {
 		    e.printStackTrace();
@@ -468,6 +508,11 @@ public class InventoryAdapter {
 
 		productService.setProductTypeConfigurable(parentProduct);
 		configurableProductsAdded.add(parentProduct.getSku());
+		/*
+		 * We found a configurable product, set the super attributes of
+		 * it
+		 */
+		determineAndSetSuperAttribute(parentProduct, posProductId);
 	    }
 
 	} catch (ServiceException e) {
@@ -476,4 +521,98 @@ public class InventoryAdapter {
 	    e.printStackTrace();
 	}
     }
+
+    private void determineAndSetSuperAttribute(Product product, int posProductId) {
+	// Select charachteristics from POS
+	try {
+	    String stmt = "select distinct description from characteristic where id IN("
+		    + "select id_characteristic  from permutation where id IN("
+		    + "select id_permutation from item_permutation where id_item IN ("
+		    + "select id from item where id_parent = ?)))";
+
+	    PreparedStatement p;
+	    p = conn.prepareStatement(stmt);
+	    p.setInt(1, posProductId);
+	    ResultSet rs = p.executeQuery();
+
+	    while (rs.next()) {
+		ProductAttribute attribute = attributeService.getByCode(rs
+			.getString("description"));
+
+		if (attribute != null) {
+		    // attributeService.getOptions(attribute);
+		    // for (Map.Entry<Integer, String> opt :
+		    // attribute.getOptions().entrySet())
+		    // System.out.println(opt.toString());
+		    productService.setSuperAttribute(product, attribute);
+		}
+	    }
+
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	} catch (ServiceException e) {
+	    e.printStackTrace();
+	}
+    }
+
+    private void setParentLink(Product childProduct, int posProductId) {
+	try {
+	    Product parentProduct = null;
+	    String stmt = "SELECT value FROM metavalue WHERE id_item = ? AND ID_METATYPE = ?";
+	    PreparedStatement p = conn.prepareStatement(stmt);
+	    p.setInt(1, posProductId);
+	    p.setInt(2, InventoryConstants.PROPERTY_CODE);
+
+	    ResultSet rs = p.executeQuery();
+
+	    while (rs.next()) {
+		String sku = rs.getString("value");
+		parentProduct = productService.getBySku(sku);
+	    }
+
+	    productLinkService.assignSimpleToConfigurable(childProduct,
+		    parentProduct);
+
+	} catch (ServiceException e) {
+	    e.printStackTrace();
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	}
+    }
+
+    private void setProductAttribute(int posProductId, Product product) {
+	try {
+	    String stmt = "select c.description AS super_attribute, p.description AS attribute "
+		    + "from permutation p, characteristic c where p.id = ("
+		    + "select id_permutation from item_permutation where id_item = ?)"
+		    + "and p.id_characteristic = c.id";
+	    PreparedStatement p = conn.prepareStatement(stmt);
+	    p.setInt(1, posProductId);
+	    ResultSet rs = p.executeQuery();
+
+	    while (rs.next()) {
+		//System.out.println(rs.getString("super_attribute") + ' '
+		//	+ rs.getString("attribute"));
+		
+		ProductAttribute attribute = attributeService.getByCode(rs.getString("super_attribute"));
+		attributeService.getOptions(attribute);
+		for (Map.Entry<Integer, String> opt : attribute.getOptions().entrySet())
+		{
+		    String magentoAttribute = rs.getString("attribute").toLowerCase();
+		    String posAttribute = opt.toString().toLowerCase().substring(2);
+		    
+			if (posAttribute.equals(magentoAttribute))
+			{
+				System.out.println("We Match");
+			}
+		}
+	    }
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	} catch (ServiceException e) {
+	    e.printStackTrace();
+	}
+
+    }
+
 }
