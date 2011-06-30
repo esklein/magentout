@@ -8,6 +8,24 @@ run through it's process to see which items have changed & sync with Magento API
 
 This application is in alpha state.
 
-TODO 
-Extend Magento API to allow linking of configurable & simple products
-Extent Magento API to allow the setting of product attributes
+Current Features
+----------------------------------------------------------------------------------------------------
+- Upload simple products
+- Upload product changes quantity, price, cost, description
+- Upload complex variated products
+- Upload and set new/existing attributes
+- Set Magento configurable products
+- Link configurable & simple products
+
+Setup Instructions 
+----------------------------------------------------------------------------------------------------
+1. Install Checkout http://checkoutapp.com/
+2. Install Magento from branch which I've forked (https://github.com/esklein/magento) - This contains API extensions which are needed.
+3. Checkout this project (magentout) & (magja) - both exist on my github.
+4. Run Checkout - Connect to local PostgreSQL instance and determine the database name which was created by Checkout
+5. Run DBScript.sql script in the postgres instance against the checkout DB.
+6. Modify ConnectionManager.java in this project specifying database name / host information.
+7. Open magentout/magja in eclipse - Run 'CheckoutLsitener.java'. Watch as you add/update products in Checkout, they'll update in Magento.
+
+If you have any questions at all feel free to email me at Evan@esitsolutions.com - I'll help as best I can.
+

@@ -8,9 +8,7 @@ import com.woe.sql.ConnectionManager;
 class Listener extends Thread {
 
 	private static String PRODUCT_ADDED = "productAdded";
-	private static String PRODUCT_DELETED = "productDeleted";
-	private static String PRODUCT_UPDATED_PRICE = "productUpdatedPrice";
-	private static String PRODUCT_UPDATED_QUANTITY = "productUpdatedQuantity";
+	private static String PRODUCT_UPDATED = "productUpdated";
 
 	private Connection conn;
 	private org.postgresql.PGConnection pgconn;
@@ -20,9 +18,7 @@ class Listener extends Thread {
 		this.pgconn = (org.postgresql.PGConnection) conn;
 		Statement stmt = conn.createStatement();
 		stmt.execute("LISTEN " + PRODUCT_ADDED);
-		stmt.execute("LISTEN " + PRODUCT_UPDATED_QUANTITY);
-		stmt.execute("LISTEN " + PRODUCT_UPDATED_PRICE);
-		stmt.execute("LISTEN " + PRODUCT_DELETED);
+		stmt.execute("LISTEN " + PRODUCT_UPDATED);
 		stmt.close();
 	}
 

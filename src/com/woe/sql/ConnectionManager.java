@@ -10,7 +10,7 @@ public final class ConnectionManager {
     private static String PASSWORD = "admin";
     private static String HOST = "localhost";
     private static String PORT = "5505";
-    private static String DB = "C2B4G1";
+    private static String DB = "C6F2B8";
 
 
     private static void loadDriver() {

@@ -121,6 +121,7 @@ public class InventoryAdapter {
 			ResultSet rs = p.executeQuery();
 
 			while (rs.next()) {
+				Product product = null;
 				int posProductId = rs.getInt("id");
 				int posParentId = rs.getInt("id_parent");
 
@@ -128,7 +129,7 @@ public class InventoryAdapter {
 						+ posProductId);
 				try {
 					/* Create the product model from checkout POS */
-					Product product = getProductModel(posProductId,
+					product = getProductModel(posProductId,
 							InventoryConstants.NEW_ACTION);
 
 					/*
@@ -173,7 +174,7 @@ public class InventoryAdapter {
 				countProductsAdded++;
 
 				// Update the checkout database and mark the product as SYNCED.
-				this.updateSyncStatus(rs.getInt("id"));
+				this.updateSyncStatus(rs.getInt("id"), product.getId());
 			}
 
 			System.out
@@ -199,20 +200,22 @@ public class InventoryAdapter {
 			ResultSet rs = p.executeQuery();
 
 			while (rs.next()) {
-				int productId = rs.getInt("id");
+				Product product = null;
+				int posProductId = rs.getInt("id");
 				System.out.println("--- UPDATING PRODUCT ON WEBSITE: "
 						+ rs.getString("sortkey_string1"));
 				try {
 					// Save the product and updated changed properties (price,
 					// qty, etc)
-					productService.save(getProductModel(productId,
-							InventoryConstants.UPDATE_ACTION));
+					product = getProductModel(posProductId,
+							InventoryConstants.UPDATE_ACTION);
+					productService.save(product);
 				} catch (ServiceException e) {
 					e.printStackTrace();
 					countProductsUpdated--;
 				}
 				// Mark product as synced
-				this.updateSyncStatus(productId);
+				this.updateSyncStatus(posProductId, product.getId());
 				countProductsUpdated++;
 			}
 
@@ -238,8 +241,8 @@ public class InventoryAdapter {
 			ResultSet rs = p.executeQuery();
 
 			while (rs.next()) {
-				this.updateSyncStatus(rs.getInt("id"));
-				System.out.println("DELETING PRODUCT FROM WEBSITE: "
+				// this.updateSyncStatus(rs.getInt("id"), null);
+				System.out.println("*** DELETING PRODUCT FROM WEBSITE: "
 						+ rs.getString("sortkey_string1"));
 			}
 		} catch (SQLException e) {
@@ -252,12 +255,13 @@ public class InventoryAdapter {
 	 * 
 	 * @param id
 	 */
-	private void updateSyncStatus(int id) {
+	private void updateSyncStatus(int posId, int magentoId) {
 		try {
-			String stmt = "UPDATE ITEM SET SYNC_STATUS = ? WHERE id = ?";
+			String stmt = "UPDATE ITEM SET SYNC_STATUS = ? , SYNC_ID = ? WHERE id = ?";
 			PreparedStatement p = conn.prepareStatement(stmt);
 			p.setString(1, "IN_SYNC");
-			p.setInt(2, id);
+			p.setInt(2, magentoId);
+			p.setInt(3, posId);
 			p.execute();
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -321,24 +325,30 @@ public class InventoryAdapter {
 						product.setCost(rs.getDouble("value"));
 						// System.out.println("Setting Cost");
 						break;
-					case InventoryConstants.PROPERTY_DESCRIPTON :
-						product.setDescription(rs.getString("value"));
-						// System.out.println("Setting Description");
-						break;
 					case InventoryConstants.PROPERTY_PRICE :
 						product.setPrice(rs.getDouble("value"));
 						// System.out.println("Setting Price");
-						break;
-					case InventoryConstants.PROPERTY_TAGS :
-						List<Category> categoriesList = this
-								.convertTagsToCategories(rs.getString("value"));
-						if (categoriesList != null)
-							product.setCategories(categoriesList);
 						break;
 					case InventoryConstants.PROPERTY_WEIGHT :
 						product.setWeight(rs.getDouble("value") * 2.2);
 						// System.out.println("Setting Weight");
 						break;
+
+					// Deprecated - TAGS
+					/*
+					 * case InventoryConstants.PROPERTY_TAGS : List<Category>
+					 * categoriesList = this
+					 * .convertTagsToCategories(rs.getString("value")); if
+					 * (categoriesList != null)
+					 * product.setCategories(categoriesList); break;
+					 */
+
+					// Deprecated - DESCRIPTION
+					/*
+					 * case InventoryConstants.PROPERTY_DESCRIPTON :
+					 * product.setDescription(rs.getString("value")); //
+					 * System.out.println("Setting Description"); break;
+					 */
 				}
 			}
 
@@ -526,10 +536,9 @@ public class InventoryAdapter {
 
 			/* Pull sku from product so we know what we're dealing with */
 			Product parentProduct = null;
-			String stmt = "SELECT value FROM metavalue WHERE id_item = ? AND ID_METATYPE = ?";
+			String stmt = "SELECT sync_id from item where id = ?";
 			PreparedStatement p = conn.prepareStatement(stmt);
 			p.setInt(1, posProductId);
-			p.setInt(2, InventoryConstants.PROPERTY_CODE);
 
 			ResultSet rs = p.executeQuery();
 
@@ -539,11 +548,11 @@ public class InventoryAdapter {
 					 * Check configurable product SKU ID - see if we can find it
 					 * within Magento
 					 */
-					String sku = rs.getString("value");
-					if (configurableProductsAdded.contains(sku))
+					Integer id = rs.getInt("sync_id");
+					if (configurableProductsAdded.contains(id))
 						return;
 					// System.out.println("TRYING TO GET: " + sku);
-					parentProduct = productService.getBySku(sku);
+					parentProduct = productService.getById(id);
 				} catch (ServiceException e) {
 					e.printStackTrace();
 				}
@@ -553,12 +562,12 @@ public class InventoryAdapter {
 					&& parentProduct.getType() != ProductTypeEnum.CONFIGURABLE
 							.getProductType()
 					&& !configurableProductsAdded.contains(parentProduct
-							.getSku())) {
+							.getId())) {
 				System.out
 						.println("^^^ PRODUCT IS A PARENT - SETTING TO CONFIGURABLE");
 
 				productService.setProductTypeConfigurable(parentProduct);
-				configurableProductsAdded.add(parentProduct.getSku());
+				configurableProductsAdded.add(parentProduct.getId());
 				/*
 				 * We found a configurable product, set the super attributes of
 				 * it
@@ -598,13 +607,14 @@ public class InventoryAdapter {
 				ProductAttribute attribute = null;
 
 				try {
-					attribute = attributeService.getByCode(attributeCode.toLowerCase());
+					attribute = attributeService.getByCode(attributeCode
+							.toLowerCase());
 				} catch (ServiceException e) {
 					e.printStackTrace();
 				}
 
 				if (attribute == null) {
-					attribute = createSelectWithOptionsAndApplyToSpecified(attributeCode);
+					attribute = createAttribute(attributeCode);
 				}
 
 				productService.setSuperAttribute(product, attribute);
@@ -626,16 +636,15 @@ public class InventoryAdapter {
 	private void setParentLink(Product childProduct, int posProductId) {
 		try {
 			Product parentProduct = null;
-			String stmt = "SELECT value FROM metavalue WHERE id_item = ? AND ID_METATYPE = ?";
+			String stmt = "SELECT sync_id from item where id = ?";
 			PreparedStatement p = conn.prepareStatement(stmt);
 			p.setInt(1, posProductId);
-			p.setInt(2, InventoryConstants.PROPERTY_CODE);
 
 			ResultSet rs = p.executeQuery();
 
 			while (rs.next()) {
-				String sku = rs.getString("value");
-				parentProduct = productService.getBySku(sku);
+				Integer id = rs.getInt("sync_id");
+				parentProduct = productService.getById(id);
 			}
 
 			productLinkService.assignSimpleToConfigurable(childProduct,
@@ -672,7 +681,8 @@ public class InventoryAdapter {
 			while (rs.next()) {
 				Boolean optionSet = false;
 				String superAttribute = rs.getString("super_attribute");
-				attribute = attributeService.getByCode(superAttribute.toLowerCase());
+				attribute = attributeService.getByCode(superAttribute
+						.toLowerCase());
 				attributeService.getOptions(attribute);
 				String magentoAttributeValue = rs.getString("attribute")
 						.toLowerCase();
@@ -727,11 +737,9 @@ public class InventoryAdapter {
 	 * @param attributeName
 	 * @return
 	 */
-	private ProductAttribute createSelectWithOptionsAndApplyToSpecified(
-			String attributeName) {
+	private ProductAttribute createAttribute(String attributeName) {
 
 		ProductAttribute attribute = new ProductAttribute();
-
 		attribute.setCode(attributeName.toLowerCase());
 		attribute.setScope(ProductAttribute.Scope.GLOBAL);
 		attribute.setGroup("General");
