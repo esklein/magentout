@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/262/trunk/src/main/resources/com/google/code/magja/model/product
+END
+productLink-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/product/productLink-mapping.properties
+END
+productMedia-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/product/productMedia-mapping.properties
+END
+product-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/svn/!svn/ver/235/trunk/src/main/resources/com/google/code/magja/model/product/product-mapping.properties
+END
+productAttributeSet-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 117
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/product/productAttributeSet-mapping.properties
+END
+productType-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/product/productType-mapping.properties
+END
+productAttribute-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 114
+/svn/!svn/ver/262/trunk/src/main/resources/com/google/code/magja/model/product/productAttribute-mapping.properties
+END

@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.google.code.magja.model.category.Category;
 import com.google.code.magja.model.media.Media;
@@ -51,10 +53,13 @@ public class InventoryAdapter {
 	private ProductLinkRemoteService productLinkService;
 	private List<Object> configurableProductsAdded;
 
+	static Logger logger = Logger.getLogger("com.woe.adapter.InventoryAdapter");
+
 	/**
 	 * Everything starts here.
 	 */
 	public static void main(String args[]) throws Exception {
+		logger.setLevel(Level.INFO);
 		InventoryAdapter iva = new InventoryAdapter();
 		iva.start();
 	}
@@ -87,7 +92,7 @@ public class InventoryAdapter {
 	 */
 	@SuppressWarnings("deprecation")
 	public void start() {
-		System.out.println("*** INVENTORY ADAPTER PROCCESS - STARTING AT: "
+		logger.info("*** INVENTORY ADAPTER PROCCESS - STARTING AT: "
 				+ new Date().toLocaleString().toUpperCase());
 		final long startTime = System.currentTimeMillis();
 		final long endTime;
@@ -101,10 +106,9 @@ public class InventoryAdapter {
 			endTime = System.currentTimeMillis();
 		}
 		final long duration = ((endTime - startTime) / 1000);
-		System.out.println("*** INVENTORY ADAPTER PROCCESS - COMPLETED IN: "
+		logger.info("*** INVENTORY ADAPTER PROCCESS - COMPLETED IN: "
 				+ duration + " SECONDS");
-		System.out
-				.println("---------------------------------------------------------------------");
+		logger.info("---------------------------------------------------------------------");
 	}
 
 	/**
@@ -125,7 +129,7 @@ public class InventoryAdapter {
 				int posProductId = rs.getInt("id");
 				int posParentId = rs.getInt("id_parent");
 
-				System.out.println("--- ADDING NEW PRODUCT TO WEBSITE: "
+				logger.info("--- ADDING NEW PRODUCT TO WEBSITE: "
 						+ posProductId);
 				try {
 					/* Create the product model from checkout POS */
@@ -166,7 +170,7 @@ public class InventoryAdapter {
 					countProductsAdded--;
 				} catch (NullPointerException e) {
 					/* This product is malformed in Checkout. */
-					System.out.println("--- UNABLE TO UPLOAD PRODUCT: "
+					logger.info("--- UNABLE TO UPLOAD PRODUCT: "
 							+ posProductId);
 					countProductsAdded--;
 					e.printStackTrace();
@@ -177,8 +181,7 @@ public class InventoryAdapter {
 				this.updateSyncStatus(rs.getInt("id"), product.getId());
 			}
 
-			System.out
-					.println("*** ADDING NEW PRODUCTS COMPLETE - TOTAL ADDED SUCCESSFULY: "
+			logger.info("*** ADDING NEW PRODUCTS COMPLETE - TOTAL ADDED SUCCESSFULY: "
 							+ countProductsAdded);
 
 		} catch (SQLException e) {
@@ -202,7 +205,7 @@ public class InventoryAdapter {
 			while (rs.next()) {
 				Product product = null;
 				int posProductId = rs.getInt("id");
-				System.out.println("--- UPDATING PRODUCT ON WEBSITE: "
+				logger.info("--- UPDATING PRODUCT ON WEBSITE: "
 						+ rs.getString("sortkey_string1"));
 				try {
 					// Save the product and updated changed properties (price,
@@ -219,8 +222,7 @@ public class InventoryAdapter {
 				countProductsUpdated++;
 			}
 
-			System.out
-					.println("*** UPDATING PRODUCTS COMPLETE - TOTAL UPDATED SUCCESSFULY: "
+			logger.info("*** UPDATING PRODUCTS COMPLETE - TOTAL UPDATED SUCCESSFULY: "
 							+ countProductsUpdated);
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -242,7 +244,7 @@ public class InventoryAdapter {
 
 			while (rs.next()) {
 				// this.updateSyncStatus(rs.getInt("id"), null);
-				System.out.println("*** DELETING PRODUCT FROM WEBSITE: "
+				logger.info("*** DELETING PRODUCT FROM WEBSITE: "
 						+ rs.getString("sortkey_string1"));
 			}
 		} catch (SQLException e) {
@@ -308,30 +310,30 @@ public class InventoryAdapter {
 				switch (rs.getInt("id_metatype")) {
 					case InventoryConstants.PROPERTY_NAME :
 						product.setName(rs.getString("value"));
-						// System.out.println("Setting Name");
+						// logger.info("Setting Name");
 						break;
 					case InventoryConstants.PROPERTY_BARCODE :
-						// System.out.println("Setting Barcode");
+						// logger.info("Setting Barcode");
 						break;
 					case InventoryConstants.PROPERTY_BRAND :
 						product.set("brand", rs.getString("value"));
 						break;
 					case InventoryConstants.PROPERTY_CODE :
 						product.setSku(rs.getString("value"));
-						// System.out.println("Setting Code" +
+						// logger.info("Setting Code" +
 						// product.getSku());
 						break;
 					case InventoryConstants.PROPERTY_COST :
 						product.setCost(rs.getDouble("value"));
-						// System.out.println("Setting Cost");
+						// logger.info("Setting Cost");
 						break;
 					case InventoryConstants.PROPERTY_PRICE :
 						product.setPrice(rs.getDouble("value"));
-						// System.out.println("Setting Price");
+						// logger.info("Setting Price");
 						break;
 					case InventoryConstants.PROPERTY_WEIGHT :
 						product.setWeight(rs.getDouble("value") * 2.2);
-						// System.out.println("Setting Weight");
+						// logger.info("Setting Weight");
 						break;
 
 					// Deprecated - TAGS
@@ -347,7 +349,7 @@ public class InventoryAdapter {
 					/*
 					 * case InventoryConstants.PROPERTY_DESCRIPTON :
 					 * product.setDescription(rs.getString("value")); //
-					 * System.out.println("Setting Description"); break;
+					 * logger.info("Setting Description"); break;
 					 */
 				}
 			}
@@ -412,7 +414,7 @@ public class InventoryAdapter {
 			ResultSet rs = ps.executeQuery();
 
 			while (rs.next()) {
-				System.out.println("Adding image to product length:"
+				logger.info("Adding image to product length:"
 						+ rs.getBytes("content").length);
 				Set<ProductMedia.Type> types = new HashSet<ProductMedia.Type>();
 				types.add(ProductMedia.Type.IMAGE);
@@ -426,7 +428,7 @@ public class InventoryAdapter {
 				int offset = 0;
 				while (offset < contentLength) {
 					bytesRead = raw.read(data, offset, data.length - offset);
-					System.out.println("Only read " + offset
+					logger.info("Only read " + offset
 							+ " bytes; Expected " + contentLength + " bytes");
 					if (bytesRead == -1)
 						break;
@@ -551,7 +553,7 @@ public class InventoryAdapter {
 					Integer id = rs.getInt("sync_id");
 					if (configurableProductsAdded.contains(id))
 						return;
-					// System.out.println("TRYING TO GET: " + sku);
+					// logger.info("TRYING TO GET: " + sku);
 					parentProduct = productService.getById(id);
 				} catch (ServiceException e) {
 					e.printStackTrace();
@@ -563,8 +565,7 @@ public class InventoryAdapter {
 							.getProductType()
 					&& !configurableProductsAdded.contains(parentProduct
 							.getId())) {
-				System.out
-						.println("^^^ PRODUCT IS A PARENT - SETTING TO CONFIGURABLE");
+				logger.info("^^^ PRODUCT IS A PARENT - SETTING TO CONFIGURABLE");
 
 				productService.setProductTypeConfigurable(parentProduct);
 				configurableProductsAdded.add(parentProduct.getId());
@@ -690,20 +691,20 @@ public class InventoryAdapter {
 				if (attribute.getOptions() != null) {
 					for (Map.Entry<Integer, String> opt : attribute
 							.getOptions().entrySet()) {
-						// System.out.println("STARTING WITH" + opt.toString());
+						// logger.info("STARTING WITH" + opt.toString());
 
 						String posAttributeValue = opt.toString().substring(
 								opt.toString().indexOf('=') + 1).toLowerCase();
 						String magentoAttributeValueId = opt.toString()
 								.substring(0, opt.toString().indexOf('='));
 
-						// System.out.println("COMPARING " + posAttributeValue
+						// logger.info("COMPARING " + posAttributeValue
 						// + " TO " + magentoAttributeValue + " ID "
 						// + magentoAttributeValueId);
 
 						if (posAttributeValue
 								.equalsIgnoreCase(magentoAttributeValue)) {
-							// System.out.println("Option is avalable - Adding:"
+							// logger.info("Option is avalable - Adding:"
 							// + magentoAttributeValue);
 							product.set(attribute.getCode(),
 									magentoAttributeValueId);
@@ -714,7 +715,7 @@ public class InventoryAdapter {
 					}
 				}
 				if (!optionSet) {
-					// System.out.println("Option is NOT avalable - Adding:" +
+					// logger.info("Option is NOT avalable - Adding:" +
 					// magentoAttributeValue);
 					attributeService.addOption(attribute, InventoryHelper
 							.capitalize(magentoAttributeValue));

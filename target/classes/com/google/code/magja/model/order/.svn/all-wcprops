@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/order
+END
+order-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 101
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/order/order-mapping.properties
+END
+shipmentTrack-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/order/shipmentTrack-mapping.properties
+END
+invoice-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 103
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/order/invoice-mapping.properties
+END
+orderAddress-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 108
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/order/orderAddress-mapping.properties
+END
+shipmentItem-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 108
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/order/shipmentItem-mapping.properties
+END
+shipment-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/order/shipment-mapping.properties
+END
+orderItem-mapping.properties
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/svn/!svn/ver/164/trunk/src/main/resources/com/google/code/magja/model/order/orderItem-mapping.properties
+END

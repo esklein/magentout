@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/286/trunk/src/test/java/com/google/code/magja/service/product
+END
+ProductAttributeRemoteServiceTest.java
+K 25
+svn:wc:ra_dav:version-url
+V 114
+/svn/!svn/ver/210/trunk/src/test/java/com/google/code/magja/service/product/ProductAttributeRemoteServiceTest.java
+END
+ProductLinkRemoteServiceTest.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/svn/!svn/ver/210/trunk/src/test/java/com/google/code/magja/service/product/ProductLinkRemoteServiceTest.java
+END
+ProductRemoteServiceTest.java
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/svn/!svn/ver/286/trunk/src/test/java/com/google/code/magja/service/product/ProductRemoteServiceTest.java
+END
+ProductMediaRemoteServiceTest.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/svn/!svn/ver/210/trunk/src/test/java/com/google/code/magja/service/product/ProductMediaRemoteServiceTest.java
+END

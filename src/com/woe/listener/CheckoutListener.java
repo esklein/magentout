@@ -1,6 +1,9 @@
 package com.woe.listener;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import com.woe.adapter.InventoryAdapter;
 import com.woe.sql.ConnectionManager;
@@ -45,6 +48,9 @@ class Listener extends Thread {
 				sqle.printStackTrace();
 			} catch (InterruptedException ie) {
 				ie.printStackTrace();
+			} catch (Throwable t)
+			{
+				t.printStackTrace();
 			}
 		}
 	}
